@@ -28,6 +28,10 @@ global{
 	
 	//Buildings
 	bathroom theBathroom;
+	bank theBank;
+	field theField;
+	shop theShop;
+	stage theStage;
 	
 	init{
 		create participant number: 10;
@@ -139,28 +143,23 @@ species participant parent:human{
 	
 	//Plans
 	plan GoForDrink intention: drink_desire or eat_desire{
-//		target <- SHOP_location;
-		target <- theBathroom;
+		target <- theShop;
 	}
 	
 	plan GoForMoney intention: bank_desire{
-//		target <- BANK_location;
-		target <- theBathroom;
+		target <- theBank;
 	}
 	
 	plan GoForPee intention: pee_desire{
-//		target <- PEE_location;
 		target <- theBathroom;
 	}
 	
 	plan GoForMusic intention: music_desire{
-//		target <- STAGE_location;
-		target <- theBathroom;
+		target <- theStage;
 	}
 	
 	plan GoForSports intention: football_desire{
-//		target <- FOOTBALL_location;
-		target <- theBathroom;
+		target <- theField;
 	}
 	
 	aspect default {
@@ -173,6 +172,73 @@ species bathroom parent: building{
 	init{
 		theBathroom <- self;
 		location <- PEE_location;
+		max_service <- 5;
+	}
+	
+	reflex relish_customers when: length(visitors) > 0{
+		if length(serving) <= max_service{
+			human next_customer <- first(visitors);
+			remove next_customer from: visitors;
+			ask next_customer{
+				target <- nil;
+			}
+		}
+	}
+}
+
+species bank parent: building{
+	
+	init{
+		theBank <- self;
+		location <- BANK_location;
+		max_service <- 5;
+	}
+	
+	reflex relish_customers when: length(visitors) > 0{
+		if length(serving) <= max_service{
+			human next_customer <- first(visitors);
+			remove next_customer from: visitors;
+		}
+	}
+}
+
+species field parent: building{
+	
+	init{
+		theField <- self;
+		location <- FOOTBALL_location;
+		max_service <- 5;
+	}
+	
+	reflex relish_customers when: length(visitors) > 0{
+		if length(serving) <= max_service{
+			human next_customer <- first(visitors);
+			remove next_customer from: visitors;
+		}
+	}
+}
+
+species shop parent: building{
+	
+	init{
+		theShop <- self;
+		location <- SHOP_location;
+		max_service <- 5;
+	}
+	
+	reflex relish_customers when: length(visitors) > 0{
+		if length(serving) <= max_service{
+			human next_customer <- first(visitors);
+			remove next_customer from: visitors;
+		}
+	}
+}
+
+species stage parent: building{
+	
+	init{
+		theStage <- self;
+		location <- STAGE_location;
 		max_service <- 5;
 	}
 	
