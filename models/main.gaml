@@ -10,13 +10,13 @@ model main
 global{
 	
 	// Desires
-	predicate drink_desire <- new_predicate("drink") with_priority 3;
+	predicate drink_desire <- new_predicate("drink") with_priority 1;
 	predicate info_desire <- new_predicate("info") with_priority 1;
 	predicate bank_desire <- new_predicate("bank") with_priority 1;
 	predicate football_desire <- new_predicate("football") with_priority 1;
 	predicate music_desire <- new_predicate("music") with_priority 1;
-	predicate pee_desire <- new_predicate("pee") with_priority 4;
-	predicate eat_desire <- new_predicate("eat") with_priority 2;
+	predicate pee_desire <- new_predicate("pee") with_priority 1;
+	predicate eat_desire <- new_predicate("eat") with_priority 1;
 	
 	// Information
 	point ICENTER_location <- {50,50};
@@ -36,6 +36,10 @@ global{
 	init{
 		create participant number: 10;
 		create bathroom number: 1;
+		create bank number: 1;
+		create field number: 1;
+		create shop number: 1;
+		create stage number: 1;
 	}
 }
 
@@ -47,6 +51,8 @@ species human skills: [moving] control: simple_bdi{
 	float thirst_level;
 	float money_level;
 	float hunger_level;
+	
+	float original_money_level;
 	
 	// Thresholds
 	float drunk_threshold;
@@ -68,6 +74,11 @@ species human skills: [moving] control: simple_bdi{
 	int waiting_time;
 	int serving_time_patience;
 	int waiting_time_patience;
+	
+	// Virtual Actions
+	action update_desire virtual:true;
+	action on_served virtual:true;
+	action on_waiting virtual:true;
 }
 
 species building {
@@ -75,6 +86,9 @@ species building {
 	list<human> serving;
 	
 	int max_service;
+	int time_for_serving;
+	int price;
+	
 }
 
 // Childern
@@ -82,16 +96,18 @@ species participant parent:human{
 	
 	init{
 		drunk_level <- rnd(0.0, 100.0);
-		money_level <- rnd(0.0, 100.0);
+		money_level <- rnd(50.0, 100.0);
 		hunger_level <- rnd(0.0, 100.0);
 		
-		drunk_threshold <- rnd(40.0, 70.0);
-		thirst_threshold <- rnd(40.0, 70.0);
-		hunger_threshold <- rnd(40.0, 70.0);	
+		original_money_level <- money_level;
 		
-		drunk_delta <- rnd(5.0, 10.0);
-		thirst_delta <- rnd(5.0, 10.0);
-		hunger_delta <- rnd(5.0, 10.0);
+		drunk_threshold <- rnd(50.0, 70.0);
+		thirst_threshold <- rnd(50.0, 70.0);
+		hunger_threshold <- rnd(50.0, 70.0);	
+		
+		drunk_delta <- rnd(10.0, 20.0);
+		thirst_delta <- rnd(10.0, 20.0);
+		hunger_delta <- rnd(10.0, 20.0);
 		
 		sport_to_music_prob <- rnd(0.2, 0.8);
 		
@@ -110,69 +126,83 @@ species participant parent:human{
 	action update_desire{
 		if thirst_level > thirst_threshold{
 			do add_desire(drink_desire);
-		} else{
-			do remove_desire(drink_desire);
+		}
+		
+		if hunger_level > hunger_threshold{
+			do add_desire(eat_desire);
 		}
 		
 		if drunk_level > drunk_threshold{
 			do add_desire(pee_desire);
 		}
 		
-		if money_level < 10.0{
+		if money_level < 50.0{
 			do add_desire(bank_desire);
-		} else{
-			do remove_desire(bank_desire);
 		}
 		
 		if flip(sport_to_music_prob){
 			do add_desire(football_desire);
-		} else if !flip(sport_to_music_prob) {
-			do add_desire(music_desire);
-		} else{
-			do remove_desire(football_desire);
-			do remove_desire(music_desire);
 		}
+		else {
+			do add_desire(music_desire);	
+		}
+	}
+	
+	action on_served{
+		waiting_time <- 0;
+		served_time <- 0;
+		do clear_intentions;
+		do clear_desires;
+	}
+	
+	action on_waiting{
+		
 	}
 	
 	//Reflexes
 	reflex basic_move{
-		if target != nil{
-			if target.location distance_to location < 3{
-				ask target{
-					if !(visitors contains myself){
-						add myself to: visitors;	
+		if self.target != nil{
+			write current_plan;
+			if self.target.location distance_to self.location < 3{
+				ask self.target{
+					if !(self.visitors contains myself){
+						add myself to: self.visitors;	
 					}
 				}
 			} else{
-				do goto target:target.location speed:speed;
+				do goto target:self.target.location speed:self.speed;
 			}
 		} else{
-			do wander;
-			thirst_level <- thirst_level + thirst_delta;
-			hunger_level <- hunger_level + hunger_delta;
+			self.thirst_level <- self.thirst_level + self.thirst_delta;
+			self.hunger_level <- self.hunger_level + self.hunger_delta;
 			do update_desire;
+			do wander;
 		}
 	}
 	
 	//Plans
-	plan GoForDrink intention: drink_desire or eat_desire{
-		target <- theShop;
+	plan GoForDrink intention: drink_desire{
+		self.target <- theShop;
+	}
+	
+	plan GoForFood intention: eat_desire{
+		self.target <- theShop;
 	}
 	
 	plan GoForMoney intention: bank_desire{
-		target <- theBank;
+		self.target <- theBank;
 	}
 	
 	plan GoForPee intention: pee_desire{
-		target <- theBathroom;
+		self.target <- theBathroom;
 	}
 	
 	plan GoForMusic intention: music_desire{
-		target <- theStage;
+		self.target <- theStage;
 	}
 	
 	plan GoForSports intention: football_desire{
-		target <- theField;
+		self.target <- theField;
 	}
 	
 	aspect default {
@@ -181,13 +211,13 @@ species participant parent:human{
 }
 
 species bathroom parent: building{
-	int time_for_serving <- 2;
-	int served_last <- 0;
 	
 	init{
 		theBathroom <- self;
 		location <- PEE_location;
 		max_service <- 5;
+		time_for_serving <- 2;
+		price <- 1;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -195,14 +225,18 @@ species bathroom parent: building{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
 			add next_customer to: serving;
-			ask next_customer{
-				target <- nil;
-				waiting_time <- 0;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					self.target <- nil;
+				}
 			}
 		}
 	}
 	
 	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
 		loop customer over: serving{
 			int customer_serving_time <- 0;
 			ask customer{
@@ -212,9 +246,18 @@ species bathroom parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(pee_desire, false);
+					do remove_intention(pee_desire, true);
+					target <- nil;
+					self.drunk_level <- self.drunk_level*0.75;
+					self.money_level <- self.money_level - myself.price;
+					do on_served;
+					add customer to: customers_served;
 				}
 			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
 		}
 	}
 }
@@ -225,12 +268,48 @@ species bank parent: building{
 		theBank <- self;
 		location <- BANK_location;
 		max_service <- 5;
+		time_for_serving <- 2;
+		price <- 0;
 	}
 	
-	reflex relish_customers when: length(visitors) > 0{
+	reflex receive_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
+			add next_customer to: serving;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					self.target <- nil;
+				}
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					do remove_intention(bank_desire, true);
+					target <- nil;
+					self.money_level <- original_money_level;
+					self.money_level <- self.money_level - myself.price;
+					do on_served;
+					add customer to: customers_served;
+				}
+			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
 		}
 	}
 }
@@ -241,12 +320,47 @@ species field parent: building{
 		theField <- self;
 		location <- FOOTBALL_location;
 		max_service <- 5;
+		time_for_serving <- 5;
+		price <- 15;
 	}
 	
-	reflex relish_customers when: length(visitors) > 0{
+	reflex recieve_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
+			add next_customer to: serving;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					self.target <- nil;
+				}
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					do remove_intention(football_desire, true);
+					target <- nil;
+					self.money_level <- self.money_level - myself.price;
+					do on_served;
+					add customer to: customers_served;
+				}
+			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
 		}
 	}
 }
@@ -257,12 +371,55 @@ species shop parent: building{
 		theShop <- self;
 		location <- SHOP_location;
 		max_service <- 5;
+		time_for_serving <- 2;
+		price <- 5;
 	}
 	
-	reflex relish_customers when: length(visitors) > 0{
+	reflex recieve_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
+			add next_customer to: serving;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					self.target <- nil;
+				}
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					self.target <- nil;
+					if self.get_current_intention = eat_desire{
+						do remove_intention(eat_desire, true);
+						self.hunger_level <- 0.0;
+						self.money_level <- self.money_level - myself.price;
+					} else{
+						do remove_intention(drink_desire, true);
+						self.thirst_level <- 0.0;
+						self.drunk_level <- self.drunk_level + self.drunk_delta;
+						self.money_level <- self.money_level - (myself.price*2);
+					}
+					do on_served;
+					add customer to: customers_served;
+				}
+			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
 		}
 	}
 }
@@ -273,12 +430,46 @@ species stage parent: building{
 		theStage <- self;
 		location <- STAGE_location;
 		max_service <- 5;
+		price <- 6;
 	}
 	
-	reflex relish_customers when: length(visitors) > 0{
+	reflex recieve_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
+			add next_customer to: serving;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					self.target <- nil;
+				}
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					do remove_intention(music_desire, true);
+					target <- nil;
+					self.money_level <- self.money_level - myself.price;
+					do on_served;
+					add customer to: customers_served;
+				}
+			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
 		}
 	}
 }
