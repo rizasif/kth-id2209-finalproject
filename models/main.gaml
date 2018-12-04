@@ -64,6 +64,10 @@ species human skills: [moving] control: simple_bdi{
 	rgb mycolor;
 	building target;
 	float speed;
+	int served_time;
+	int waiting_time;
+	int serving_time_patience;
+	int waiting_time_patience;
 }
 
 species building {
@@ -94,14 +98,20 @@ species participant parent:human{
 		speed <- rnd(0.3,1.0);
 		mycolor <- #blue;
 		
-		float viewdist <- 1.0;
 		target <- nil;
+		
+		served_time <- 0;
+		waiting_time <- 0;
+		serving_time_patience <- rnd(2,5);
+		waiting_time_patience <- rnd(2,5);
 	}
 	
 	//Actions
 	action update_desire{
 		if thirst_level > thirst_threshold{
 			do add_desire(drink_desire);
+		} else{
+			do remove_desire(drink_desire);
 		}
 		
 		if drunk_level > drunk_threshold{
@@ -110,14 +120,17 @@ species participant parent:human{
 		
 		if money_level < 10.0{
 			do add_desire(bank_desire);
+		} else{
+			do remove_desire(bank_desire);
 		}
 		
 		if flip(sport_to_music_prob){
 			do add_desire(football_desire);
-		} 
-		
-		else if !flip(sport_to_music_prob) {
+		} else if !flip(sport_to_music_prob) {
 			do add_desire(music_desire);
+		} else{
+			do remove_desire(football_desire);
+			do remove_desire(music_desire);
 		}
 	}
 	
@@ -168,6 +181,8 @@ species participant parent:human{
 }
 
 species bathroom parent: building{
+	int time_for_serving <- 2;
+	int served_last <- 0;
 	
 	init{
 		theBathroom <- self;
@@ -175,12 +190,30 @@ species bathroom parent: building{
 		max_service <- 5;
 	}
 	
-	reflex relish_customers when: length(visitors) > 0{
+	reflex recieve_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
+			add next_customer to: serving;
 			ask next_customer{
 				target <- nil;
+				waiting_time <- 0;
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					do remove_intention(pee_desire, false);
+				}
 			}
 		}
 	}
