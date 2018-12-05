@@ -36,7 +36,7 @@ global{
 	icenter theIcenter;
 	
 	init{
-		create participant number: 10;
+		create participant number: 2;
 		create bathroom number: 1;
 		create bank number: 1;
 		create field number: 1;
@@ -112,8 +112,8 @@ species participant parent:human {
 		original_money_level <- money_level;
 		
 		drunk_threshold <- rnd(50.0, 70.0);
-		thirst_threshold <- rnd(50.0, 70.0);
-		hunger_threshold <- rnd(50.0, 70.0);	
+		thirst_threshold <- rnd(80.0, 100.0);
+		hunger_threshold <- rnd(80.0, 100.0);	
 		
 		drunk_delta <- rnd(10.0, 20.0);
 		thirst_delta <- rnd(10.0, 20.0);
@@ -422,7 +422,7 @@ species field parent: building{
 		location <- FOOTBALL_location;
 		max_service <- 5;
 		time_for_serving <- 5;
-		price <- 15;
+		price <- 25;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -474,7 +474,7 @@ species shop parent: building{
 		location <- SHOP_location;
 		max_service <- 5;
 		time_for_serving <- 2;
-		price <- 5;
+		price <- 30;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -534,7 +534,7 @@ species stage parent: building{
 		theStage <- self;
 		location <- STAGE_location;
 		max_service <- 5;
-		price <- 6;
+		price <- 50;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
