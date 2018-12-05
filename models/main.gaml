@@ -19,7 +19,7 @@ global{
 	predicate eat_desire <- new_predicate("eat") with_priority 1;
 	
 	// Information
-	point ICENTER_location <- {50,50};
+	point ICENTER_location <- {10,10};
 	point STAGE_location <- {50, 75};
 	point BANK_location <- {75, 75};
 	point SHOP_location <- {75, 50};
@@ -32,6 +32,7 @@ global{
 	field theField;
 	shop theShop;
 	stage theStage;
+	icenter theIcenter;
 	
 	init{
 		create participant number: 10;
@@ -40,6 +41,7 @@ global{
 		create field number: 1;
 		create shop number: 1;
 		create stage number: 1;
+		create icenter number:1;
 	}
 }
 
@@ -67,6 +69,7 @@ species human skills: [moving] control: simple_bdi{
 	//Preference
 	float sport_to_music_prob;
 	
+	// Variables
 	rgb mycolor;
 	building target;
 	float speed;
@@ -74,6 +77,8 @@ species human skills: [moving] control: simple_bdi{
 	int waiting_time;
 	int serving_time_patience;
 	int waiting_time_patience;
+	list<building> Memory;
+	predicate info_required;
 	
 	// Virtual Actions
 	action update_desire virtual:true;
@@ -120,6 +125,7 @@ species participant parent:human{
 		waiting_time <- 0;
 		serving_time_patience <- rnd(2,5);
 		waiting_time_patience <- rnd(2,5);
+		info_required <- nil;
 	}
 	
 	//Actions
@@ -152,7 +158,9 @@ species participant parent:human{
 		waiting_time <- 0;
 		served_time <- 0;
 		do clear_intentions;
-		do clear_desires;
+//		do clear_desires;
+		target <- nil;
+		do update_desire;
 	}
 	
 	action on_waiting{
@@ -161,8 +169,8 @@ species participant parent:human{
 	
 	//Reflexes
 	reflex basic_move{
+//		write " " + current_plan + " " + get_current_intention() + " " + thirst_level + " " + hunger_level;
 		if self.target != nil{
-			write current_plan;
 			if self.target.location distance_to self.location < 3{
 				ask self.target{
 					if !(self.visitors contains myself){
@@ -181,28 +189,72 @@ species participant parent:human{
 	}
 	
 	//Plans
+	plan GoForInfo intention: info_desire{
+		self.target <- theIcenter;
+	}
+	
+	reflex GetInfoLocation when: info_required != nil{
+		self.target <- theIcenter;
+	}
+	
 	plan GoForDrink intention: drink_desire{
-		self.target <- theShop;
+		if Memory contains theShop{
+			self.target <- theShop;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: drink_desire subintentions: info_desire;
+			info_required <- drink_desire;
+		}
 	}
 	
 	plan GoForFood intention: eat_desire{
-		self.target <- theShop;
+		if Memory contains theShop{
+			self.target <- theShop;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: eat_desire subintentions: info_desire;
+			info_required <- eat_desire;
+		}
 	}
 	
 	plan GoForMoney intention: bank_desire{
-		self.target <- theBank;
+		if Memory contains theBank{
+			self.target <- theBank;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: bank_desire subintentions: info_desire;
+			info_required <- bank_desire;
+		}
 	}
 	
 	plan GoForPee intention: pee_desire{
-		self.target <- theBathroom;
+		if Memory contains theBathroom{
+			self.target <- theBathroom;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: pee_desire subintentions: info_desire;
+			info_required <- pee_desire;
+		}
 	}
 	
 	plan GoForMusic intention: music_desire{
-		self.target <- theStage;
+		if Memory contains theStage{
+			self.target <- theStage;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: music_desire subintentions: info_desire;
+			info_required <- music_desire;
+		}
 	}
 	
 	plan GoForSports intention: football_desire{
-		self.target <- theField;
+		if Memory contains theField{
+			self.target <- theField;	
+		} else if info_required = nil{
+			do current_intention_on_hold;
+			do add_subintention predicate: football_desire subintentions: info_desire;
+			info_required <- football_desire;
+		}
 	}
 	
 	aspect default {
@@ -229,7 +281,7 @@ species bathroom parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					self.target <- nil;
+					//self.//target <- nil;
 				}
 			}
 		}
@@ -247,7 +299,7 @@ species bathroom parent: building{
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(pee_desire, true);
-					target <- nil;
+					//target <- nil;
 					self.drunk_level <- self.drunk_level*0.75;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
@@ -281,7 +333,7 @@ species bank parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					self.target <- nil;
+					//self.//target <- nil;
 				}
 			}
 		}
@@ -299,7 +351,7 @@ species bank parent: building{
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(bank_desire, true);
-					target <- nil;
+					//target <- nil;
 					self.money_level <- original_money_level;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
@@ -333,7 +385,7 @@ species field parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					self.target <- nil;
+					//self.//target <- nil;
 				}
 			}
 		}
@@ -351,7 +403,7 @@ species field parent: building{
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(football_desire, true);
-					target <- nil;
+					//target <- nil;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
 					add customer to: customers_served;
@@ -384,7 +436,7 @@ species shop parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					self.target <- nil;
+					//self.//target <- nil;
 				}
 			}
 		}
@@ -401,7 +453,7 @@ species shop parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					self.target <- nil;
+					//self.//target <- nil;
 					if self.get_current_intention = eat_desire{
 						do remove_intention(eat_desire, true);
 						self.hunger_level <- 0.0;
@@ -442,7 +494,7 @@ species stage parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					self.target <- nil;
+					//self.//target <- nil;
 				}
 			}
 		}
@@ -460,8 +512,81 @@ species stage parent: building{
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(music_desire, true);
-					target <- nil;
+					//target <- nil;
 					self.money_level <- self.money_level - myself.price;
+					do on_served;
+					add customer to: customers_served;
+				}
+			}
+		}
+		
+		loop p over: customers_served{
+			remove p from: serving;
+		}
+	}
+}
+
+species icenter parent: building{
+	
+	init{
+		theIcenter <- self;
+		location <- ICENTER_location;
+		max_service <- 5;
+		price <- 0;
+	}
+	
+	reflex recieve_customers when: length(visitors) > 0{
+		if length(serving) <= max_service{
+			human next_customer <- first(visitors);
+			remove next_customer from: visitors;
+			add next_customer to: serving;
+		} else{
+			loop p over:visitors{
+				ask p{
+					self.waiting_time <- waiting_time + 1;
+					//self.//target <- nil;
+				}
+			}
+		}
+	}
+	
+	reflex serve_customers when: length(serving) > 0{
+		list<human> customers_served;
+		loop customer over: serving{
+			int customer_serving_time <- 0;
+			ask customer{
+				self.served_time <- self.served_time + 1;
+				customer_serving_time <- self.served_time;
+			}
+			
+			if customer_serving_time > self.time_for_serving{
+				ask customer{
+					do remove_intention(info_desire, true);
+					do remove_desire(info_desire);
+					self.money_level <- self.money_level - myself.price;
+					
+					if self.info_required = drink_desire{
+						add theShop to: self.Memory;
+						target <- theShop;
+					} else if self.info_required = eat_desire{
+						add theShop to: self.Memory;
+						target <- theShop;
+					} else if self.info_required = bank_desire{
+						add theBank to: self.Memory;
+						target <- theBank;
+					} else if self.info_required = football_desire{
+						add theField to: self.Memory;
+						target <- theField;
+					} else if self.info_required = music_desire{
+						add theStage to: self.Memory;
+						target <- theStage;
+					} else if self.info_required = pee_desire{
+						add theBathroom to: self.Memory;
+						target <- theBathroom;
+					}
+					
+					do add_desire(self.info_required);
+					self.info_required <- nil;
 					do on_served;
 					add customer to: customers_served;
 				}
