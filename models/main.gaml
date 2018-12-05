@@ -17,6 +17,7 @@ global{
 	predicate music_desire <- new_predicate("music") with_priority 1;
 	predicate pee_desire <- new_predicate("pee") with_priority 1;
 	predicate eat_desire <- new_predicate("eat") with_priority 1;
+	predicate socialize_desire <- new_predicate("socialize_desire")  with_priority 1;
 	
 	// Information
 	point ICENTER_location <- {10,10};
@@ -80,10 +81,14 @@ species human skills: [moving] control: simple_bdi{
 	list<building> Memory;
 	predicate info_required;
 	
+	// Constants
+	float viewdist <- 0.1;
+	
 	// Virtual Actions
 	action update_desire virtual:true;
 	action on_served virtual:true;
 	action on_waiting virtual:true;
+	
 }
 
 species building {
@@ -97,7 +102,7 @@ species building {
 }
 
 // Childern
-species participant parent:human{
+species participant parent:human {
 	
 	init{
 		drunk_level <- rnd(0.0, 100.0);
@@ -126,6 +131,7 @@ species participant parent:human{
 		serving_time_patience <- rnd(2,5);
 		waiting_time_patience <- rnd(2,5);
 		info_required <- nil;
+		use_social_architecture <- true;
 	}
 	
 	//Actions
@@ -181,16 +187,27 @@ species participant parent:human{
 				do goto target:self.target.location speed:self.speed;
 			}
 		} else{
-			self.thirst_level <- self.thirst_level + self.thirst_delta;
-			self.hunger_level <- self.hunger_level + self.hunger_delta;
+			
 			do update_desire;
 			do wander;
 		}
+		
+		self.thirst_level <- self.thirst_level + self.thirst_delta;
+		self.hunger_level <- self.hunger_level + self.hunger_delta;
 	}
 	
 	//Plans
-	plan GoForInfo intention: info_desire{
-		self.target <- theIcenter;
+	plan share_information_to_people intention: socialize_desire{
+		loop s over:social_link_base{
+			if get_liking(s) > 0.5{
+				if get_agent(s).location distance_to location < 0.5{
+					write "How yu doin?";
+					break;	
+				}
+			}
+		}
+		
+		do remove_intention(socialize_desire, true);
 	}
 	
 	reflex GetInfoLocation when: info_required != nil{
@@ -257,6 +274,35 @@ species participant parent:human{
 		}
 	}
 	
+	// Perception
+	perceive target:participant in:viewdist {
+		float like <- 1.0;
+		float familiar <- 0.0;
+		float dom <- rnd(-0.9,0.9);
+		if self.get_current_intention() != myself.get_current_intention(){
+			like <- like - rnd(0.2, 0.6);
+		}
+		else{
+			familiar <- rnd(0.5, 1.0);
+		}
+		like <- like - (abs(self.drunk_level - myself.drunk_level)/100.0);
+		
+		social_link link <- new_social_link(self, like, dom, 0.0, familiar);
+		bool link_exists <- false;
+		loop b over: social_link_base{
+			if get_agent(b) = self{
+				link_exists <- true;
+				do remove_social_link social_link: b;
+				break;
+			}
+		}
+		
+		do add_social_link(link);
+		
+		
+//		write "I am socializing with: " + like + " " + dom + " " + familiar;
+	}
+	
 	aspect default {
 	        draw circle(1) color: mycolor border: #black;
 	}
@@ -281,7 +327,7 @@ species bathroom parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -294,11 +340,13 @@ species bathroom parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(pee_desire, true);
+					do remove_intention(socialize_desire, true);
 					//target <- nil;
 					self.drunk_level <- self.drunk_level*0.75;
 					self.money_level <- self.money_level - myself.price;
@@ -333,7 +381,7 @@ species bank parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -346,12 +394,13 @@ species bank parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(bank_desire, true);
-					//target <- nil;
+					do remove_intention(socialize_desire, true);
 					self.money_level <- original_money_level;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
@@ -385,7 +434,7 @@ species field parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -398,12 +447,13 @@ species field parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(football_desire, true);
-					//target <- nil;
+					do remove_intention(socialize_desire, true);
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
 					add customer to: customers_served;
@@ -436,7 +486,7 @@ species shop parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -449,6 +499,7 @@ species shop parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
@@ -456,6 +507,7 @@ species shop parent: building{
 					//self.//target <- nil;
 					if self.get_current_intention = eat_desire{
 						do remove_intention(eat_desire, true);
+						do remove_intention(socialize_desire, true);
 						self.hunger_level <- 0.0;
 						self.money_level <- self.money_level - myself.price;
 					} else{
@@ -494,7 +546,7 @@ species stage parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -507,12 +559,13 @@ species stage parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(music_desire, true);
-					//target <- nil;
+					do remove_intention(socialize_desire, true);
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
 					add customer to: customers_served;
@@ -544,7 +597,7 @@ species icenter parent: building{
 			loop p over:visitors{
 				ask p{
 					self.waiting_time <- waiting_time + 1;
-					//self.//target <- nil;
+					do add_desire predicate:socialize_desire;
 				}
 			}
 		}
@@ -557,12 +610,14 @@ species icenter parent: building{
 			ask customer{
 				self.served_time <- self.served_time + 1;
 				customer_serving_time <- self.served_time;
+				do add_desire predicate:socialize_desire;
 			}
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					do remove_intention(info_desire, true);
 					do remove_desire(info_desire);
+					do remove_intention(socialize_desire, true);
 					self.money_level <- self.money_level - myself.price;
 					
 					if self.info_required = drink_desire{
