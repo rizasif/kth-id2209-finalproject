@@ -179,8 +179,16 @@ species participant parent:human {
 		if self.target != nil{
 			if self.target.location distance_to self.location < 3{
 				ask self.target{
-					if !(self.visitors contains myself){
-						add myself to: self.visitors;	
+					if (self.price > 0){
+						if myself.money_level > self.price*2.0{
+							if !(self.visitors contains myself){
+								add myself to: self.visitors;	
+							}
+						} else{
+							predicate intention_now <- get_intentions_with_name(get_current_intention())[0]
+							do current_intention_on_hold;
+							do add_subintention predicate: intention_now subintentions: bank_desire;
+						}
 					}
 				}
 			} else{
@@ -315,7 +323,7 @@ species bathroom parent: building{
 		location <- PEE_location;
 		max_service <- 5;
 		time_for_serving <- 2;
-		price <- 1;
+		price <- 0;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -347,7 +355,6 @@ species bathroom parent: building{
 				ask customer{
 					do remove_intention(pee_desire, true);
 					do remove_intention(socialize_desire, true);
-					//target <- nil;
 					self.drunk_level <- self.drunk_level*0.75;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
