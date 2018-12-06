@@ -36,7 +36,7 @@ global{
 	icenter theIcenter;
 	
 	init{
-		create participant number: 2;
+		create participant number: 1;
 		create bathroom number: 1;
 		create bank number: 1;
 		create field number: 1;
@@ -175,7 +175,7 @@ species participant parent:human {
 	
 	//Reflexes
 	reflex basic_move{
-//		write " " + current_plan + " " + get_current_intention() + " " + thirst_level + " " + hunger_level;
+		write " " + current_plan + " " + get_current_intention() + " " + thirst_level + " " + hunger_level + " " + money_level;
 		if self.target != nil{
 			if self.target.location distance_to self.location < 3{
 				bool have_money <- true;
