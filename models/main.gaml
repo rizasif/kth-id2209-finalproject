@@ -178,6 +178,7 @@ species participant parent:human {
 //		write " " + current_plan + " " + get_current_intention() + " " + thirst_level + " " + hunger_level;
 		if self.target != nil{
 			if self.target.location distance_to self.location < 3{
+				bool have_money <- true;
 				ask self.target{
 					if (self.price > 0){
 						if myself.money_level > self.price*2.0{
@@ -185,12 +186,17 @@ species participant parent:human {
 								add myself to: self.visitors;	
 							}
 						} else{
-							predicate intention_now <- myself.get_intentions_with_name(myself.get_current_intention())[0];
-							do current_intention_on_hold;
-							do add_subintention predicate: intention_now subintentions: bank_desire;
+							have_money <- false;
 						}
 					}
 				}
+
+				if !have_money{
+					predicate intention_now <- get_intentions_with_name(get_current_intention())[0];
+					do current_intention_on_hold;
+					do add_subintention predicate: intention_now subintentions: bank_desire;
+				}
+
 			} else{
 				do goto target:self.target.location speed:self.speed;
 			}
