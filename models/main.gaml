@@ -195,7 +195,7 @@ species participant parent:human {
 					predicate intention_now <- get_current_intention();
 					do current_intention_on_hold;
 					do add_subintention predicate: intention_now subintentions: bank_desire;
-					do add_desire(bank_desire);
+					do add_intention(bank_desire, true);
 				}
 
 			} else{
