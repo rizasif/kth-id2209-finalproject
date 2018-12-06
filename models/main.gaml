@@ -185,7 +185,7 @@ species participant parent:human {
 								add myself to: self.visitors;	
 							}
 						} else{
-							predicate intention_now <- get_intentions_with_name(get_current_intention())[0]
+							predicate intention_now <- myself.get_intentions_with_name(myself.get_current_intention())[0];
 							do current_intention_on_hold;
 							do add_subintention predicate: intention_now subintentions: bank_desire;
 						}
