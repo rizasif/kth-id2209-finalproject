@@ -234,7 +234,7 @@ species participant parent:human {
 	plan GoForDrink intention: drink_desire{
 		if Memory contains theShop{
 			self.target <- theShop;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: drink_desire subintentions: info_desire add_as_desire: true;
 			info_required <- drink_desire;
@@ -244,7 +244,7 @@ species participant parent:human {
 	plan GoForFood intention: eat_desire{
 		if Memory contains theShop{
 			self.target <- theShop;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: eat_desire subintentions: info_desire add_as_desire: true;
 			info_required <- eat_desire;
@@ -254,7 +254,7 @@ species participant parent:human {
 	plan GoForMoney intention: bank_desire{
 		if Memory contains theBank{
 			self.target <- theBank;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: bank_desire subintentions: info_desire add_as_desire: true;
 			info_required <- bank_desire;
@@ -264,7 +264,7 @@ species participant parent:human {
 	plan GoForPee intention: pee_desire{
 		if Memory contains theBathroom{
 			self.target <- theBathroom;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: pee_desire subintentions: info_desire add_as_desire: true;
 			info_required <- pee_desire;
@@ -274,7 +274,7 @@ species participant parent:human {
 	plan GoForMusic intention: music_desire{
 		if Memory contains theStage{
 			self.target <- theStage;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: music_desire subintentions: info_desire add_as_desire: true;
 			info_required <- music_desire;
@@ -284,7 +284,7 @@ species participant parent:human {
 	plan GoForSports intention: football_desire{
 		if Memory contains theField{
 			self.target <- theField;	
-		} else if info_required = nil{
+		} else{
 			do current_intention_on_hold;
 			do add_subintention predicate: football_desire subintentions: info_desire add_as_desire: true;
 			info_required <- football_desire;
