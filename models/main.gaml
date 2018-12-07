@@ -236,7 +236,7 @@ species participant parent:human {
 			self.target <- theShop;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: drink_desire subintentions: info_desire;
+			do add_subintention predicate: drink_desire subintentions: info_desire add_as_desire: true;
 			info_required <- drink_desire;
 		}
 	}
@@ -246,7 +246,7 @@ species participant parent:human {
 			self.target <- theShop;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: eat_desire subintentions: info_desire;
+			do add_subintention predicate: eat_desire subintentions: info_desire add_as_desire: true;
 			info_required <- eat_desire;
 		}
 	}
@@ -256,7 +256,7 @@ species participant parent:human {
 			self.target <- theBank;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: bank_desire subintentions: info_desire;
+			do add_subintention predicate: bank_desire subintentions: info_desire add_as_desire: true;
 			info_required <- bank_desire;
 		}
 	}
@@ -266,7 +266,7 @@ species participant parent:human {
 			self.target <- theBathroom;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: pee_desire subintentions: info_desire;
+			do add_subintention predicate: pee_desire subintentions: info_desire add_as_desire: true;
 			info_required <- pee_desire;
 		}
 	}
@@ -276,7 +276,7 @@ species participant parent:human {
 			self.target <- theStage;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: music_desire subintentions: info_desire;
+			do add_subintention predicate: music_desire subintentions: info_desire add_as_desire: true;
 			info_required <- music_desire;
 		}
 	}
@@ -286,7 +286,7 @@ species participant parent:human {
 			self.target <- theField;	
 		} else if info_required = nil{
 			do current_intention_on_hold;
-			do add_subintention predicate: football_desire subintentions: info_desire;
+			do add_subintention predicate: football_desire subintentions: info_desire add_as_desire: true;
 			info_required <- football_desire;
 		}
 	}
