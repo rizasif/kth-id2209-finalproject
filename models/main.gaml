@@ -208,6 +208,10 @@ species participant parent:human {
 		self.thirst_level <- self.thirst_level + self.thirst_delta;
 		self.hunger_level <- self.hunger_level + self.hunger_delta;
 	}
+
+	reflex GetInfoLocation when: info_required != nil{
+		self.target <- theIcenter;
+	}
 	
 	//Plans
 	plan share_information_to_people intention: socialize_desire{
@@ -222,8 +226,8 @@ species participant parent:human {
 		
 		do remove_intention(socialize_desire, true);
 	}
-	
-	reflex GetInfoLocation when: info_required != nil{
+
+	plan GoToIcenter intention: info_desire{
 		self.target <- theIcenter;
 	}
 	
