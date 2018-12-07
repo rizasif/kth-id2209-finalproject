@@ -86,7 +86,7 @@ species human skills: [moving] control: simple_bdi{
 	
 	// Virtual Actions
 	action update_desire virtual:true;
-	action on_served virtual:true;
+	action on_served(building new_target<-nil) virtual:true;
 	action on_waiting virtual:true;
 	
 }
@@ -132,6 +132,8 @@ species participant parent:human {
 		waiting_time_patience <- rnd(2,5);
 		info_required <- nil;
 		use_social_architecture <- true;
+		
+		add theBank to: Memory;
 	}
 	
 	//Actions
@@ -160,12 +162,12 @@ species participant parent:human {
 		}
 	}
 	
-	action on_served{
+	action on_served(building new_target<-nil){
 		waiting_time <- 0;
 		served_time <- 0;
 		// do clear_intentions;
 //		do clear_desires;
-		target <- nil;
+		target <- new_target;
 		do update_desire;
 	}
 	
@@ -639,29 +641,35 @@ species icenter parent: building{
 					
 					if self.info_required = drink_desire{
 						add theShop to: self.Memory;
-						target <- theShop;
+						do on_served(theShop);
+//						target <- theShop;
 					} else if self.info_required = eat_desire{
 						add theShop to: self.Memory;
-						target <- theShop;
+						do on_served(theShop);
+//						target <- theShop;
 					} else if self.info_required = bank_desire{
 						add theBank to: self.Memory;
-						target <- theBank;
+						do on_served(theBank);
+//						target <- theBank;
 					} else if self.info_required = football_desire{
 						add theField to: self.Memory;
-						target <- theField;
+						do on_served(theField);
+//						target <- theField;
 					} else if self.info_required = music_desire{
 						add theStage to: self.Memory;
-						target <- theStage;
+						do on_served(theStage);
+//						target <- theStage;
 					} else if self.info_required = pee_desire{
 						add theBathroom to: self.Memory;
-						target <- theBathroom;
+						do on_served(theBathroom);
+//						target <- theBathroom;
 					} else {
 						write "No Info Required";
 					}
 					
 					do add_desire(self.info_required);
 					self.info_required <- nil;
-					do on_served;
+//					do on_served;
 					add customer to: customers_served;
 				}
 			}
