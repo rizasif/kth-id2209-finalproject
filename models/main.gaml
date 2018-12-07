@@ -11,7 +11,7 @@ global{
 	
 	// Desires
 	predicate drink_desire <- new_predicate("drink") with_priority 1;
-	predicate info_desire <- new_predicate("info") with_priority 1;
+	predicate info_desire <- new_predicate("info") with_priority 2;
 	predicate bank_desire <- new_predicate("bank") with_priority 1;
 	predicate football_desire <- new_predicate("football") with_priority 1;
 	predicate music_desire <- new_predicate("music") with_priority 1;
