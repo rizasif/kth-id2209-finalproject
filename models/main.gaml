@@ -180,14 +180,12 @@ species participant parent:human {
 			if self.target.location distance_to self.location < 3{
 				bool have_money <- true;
 				ask self.target{
-					if (self.price > 0){
-						if myself.money_level > self.price*2.0{
-							if !(self.visitors contains myself){
-								add myself to: self.visitors;	
-							}
-						} else{
-							have_money <- false;
+					if myself.money_level > self.price*2.0{
+						if !(self.visitors contains myself){
+							add myself to: self.visitors;	
 						}
+					} else{
+						have_money <- false;
 					}
 				}
 
