@@ -655,6 +655,8 @@ species icenter parent: building{
 					} else if self.info_required = pee_desire{
 						add theBathroom to: self.Memory;
 						target <- theBathroom;
+					} else {
+						write "No Info Required";
 					}
 					
 					do add_desire(self.info_required);
