@@ -209,9 +209,9 @@ species participant parent:human {
 		self.hunger_level <- self.hunger_level + self.hunger_delta;
 	}
 
-	reflex GetInfoLocation when: info_required != nil{
-		self.target <- theIcenter;
-	}
+	// reflex GetInfoLocation when: info_required != nil{
+	// 	self.target <- theIcenter;
+	// }
 	
 	//Plans
 	plan share_information_to_people intention: socialize_desire{
