@@ -10,13 +10,13 @@ model main
 global{
 	
 	// Desires
-	predicate drink_desire <- new_predicate("drink") with_priority 1;
-	predicate info_desire <- new_predicate("info") with_priority 2;
-	predicate bank_desire <- new_predicate("bank") with_priority 1;
+	predicate drink_desire <- new_predicate("drink") with_priority 2;
+	predicate info_desire <- new_predicate("info") with_priority 1;
+	predicate bank_desire <- new_predicate("bank") with_priority 2;
 	predicate football_desire <- new_predicate("football") with_priority 1;
 	predicate music_desire <- new_predicate("music") with_priority 1;
 	predicate pee_desire <- new_predicate("pee") with_priority 1;
-	predicate eat_desire <- new_predicate("eat") with_priority 1;
+	predicate eat_desire <- new_predicate("eat") with_priority 2;
 	predicate socialize_desire <- new_predicate("socialize_desire")  with_priority 1;
 	
 	// Information
@@ -35,8 +35,15 @@ global{
 	stage theStage;
 	icenter theIcenter;
 	
+	// constants
+	float max_drinking <- 70.0;
+	float max_hunger <- 1000.0;
+	float max_thirst <- 1000.0;
+	float max_money <- 1000.0;
+	
+	
 	init{
-		create participant number: 1;
+		create participant number: 50;
 		create bathroom number: 1;
 		create bank number: 1;
 		create field number: 1;
@@ -80,14 +87,56 @@ species human skills: [moving] control: simple_bdi{
 	int waiting_time_patience;
 	list<building> Memory;
 	predicate info_required;
+	predicate my_preference;
 	
 	// Constants
 	float viewdist <- 0.1;
+	int max_wandering_time <- 5;
+	int wandering_for;
 	
 	// Virtual Actions
 	action update_desire virtual:true;
-	action on_served(building new_target<-nil) virtual:true;
+	action on_served virtual:true;
 	action on_waiting virtual:true;
+	action out_of_money virtual:true;
+	
+	// Reflexes
+	
+	
+	// Actions
+	action verify_target{
+		predicate intention_now <- get_current_intention();
+		bool needs_update <- false;
+		
+		if target=theBathroom and intention_now != theBathroom.motive{
+			needs_update <- true;
+		} 
+		else if target=theBank and intention_now != theBank.motive{
+			needs_update <- true;
+		}
+		else if target=theField and intention_now != theField.motive{
+			needs_update <- true;
+		}
+		else if target=theShop and intention_now != theShop.motive{
+			if intention_now != drink_desire{ // since there are two motives for shop
+				needs_update <- true;
+			}
+		}
+		else if target=theStage and intention_now != theStage.motive{
+			needs_update <- true;
+		}
+		else if target=theIcenter and intention_now != theIcenter.motive{
+			needs_update <- true;
+		} else if target = nil{
+			needs_update <- true;
+		}
+		
+		if needs_update{
+//			write "We have a problem: " + target + " " + intention_now;
+//			do remove_intention(intention_now, true);
+			do update_desire;
+		}
+	}
 	
 }
 
@@ -99,6 +148,7 @@ species building {
 	int time_for_serving;
 	int price;
 	
+	predicate motive;
 }
 
 // Childern
@@ -106,23 +156,23 @@ species participant parent:human {
 	
 	init{
 		drunk_level <- rnd(0.0, 100.0);
-		money_level <- rnd(50.0, 100.0);
+		money_level <- rnd(500.0, max_money);
 		hunger_level <- rnd(0.0, 100.0);
 		
 		original_money_level <- money_level;
 		
-		drunk_threshold <- rnd(50.0, 70.0);
-		thirst_threshold <- rnd(80.0, 100.0);
-		hunger_threshold <- rnd(80.0, 100.0);	
+		drunk_threshold <- rnd(50.0, max_drinking);
+		thirst_threshold <- rnd(500.0, max_thirst);
+		hunger_threshold <- rnd(500.0, max_hunger);	
 		
 		drunk_delta <- rnd(10.0, 20.0);
-		thirst_delta <- rnd(10.0, 20.0);
-		hunger_delta <- rnd(10.0, 20.0);
+		thirst_delta <- rnd(5.0, 10.0);
+		hunger_delta <- rnd(5.0, 10.0);
 		
 		sport_to_music_prob <- rnd(0.2, 0.8);
 		
-		speed <- rnd(0.3,1.0);
-		mycolor <- #blue;
+		speed <- 1.0;
+		mycolor <- #white;
 		
 		target <- nil;
 		
@@ -131,6 +181,8 @@ species participant parent:human {
 		serving_time_patience <- rnd(2,5);
 		waiting_time_patience <- rnd(2,5);
 		info_required <- nil;
+		wandering_for <- 0;
+		
 		use_social_architecture <- true;
 		
 		add theBank to: Memory;
@@ -138,23 +190,23 @@ species participant parent:human {
 	
 	//Actions
 	action update_desire{
-		if thirst_level > thirst_threshold{
-			do add_desire(drink_desire);
-		}
-		
-		if hunger_level > hunger_threshold{
-			do add_desire(eat_desire);
-		}
-		
-		if drunk_level > drunk_threshold{
-			do add_desire(pee_desire);
-		}
-		
-		if money_level < 50.0{
+		if money_level < 250.0{
 			do add_desire(bank_desire);
 		}
 		
-		if flip(sport_to_music_prob){
+		else if thirst_level > thirst_threshold{
+			do add_desire(drink_desire);
+		}
+		
+		else if hunger_level > hunger_threshold{
+			do add_desire(eat_desire);
+		}
+		
+		else if drunk_level > drunk_threshold{
+			do add_desire(pee_desire);
+		}
+		
+		else if flip(sport_to_music_prob){
 			do add_desire(football_desire);
 		}
 		else {
@@ -162,12 +214,12 @@ species participant parent:human {
 		}
 	}
 	
-	action on_served(building new_target<-nil){
+	action on_served{
 		waiting_time <- 0;
 		served_time <- 0;
-		// do clear_intentions;
+//		 do clear_intentions;
 //		do clear_desires;
-		target <- new_target;
+		target <- nil;
 		do update_desire;
 	}
 	
@@ -175,11 +227,23 @@ species participant parent:human {
 		
 	}
 	
+	action out_of_money{
+//		write "dont have the money";
+		predicate intention_now <- get_current_intention();
+		do current_intention_on_hold;
+		do add_subintention predicate: intention_now subintentions: bank_desire add_as_desire: true;
+		do add_desire(bank_desire);
+		target <- theBank;
+		do update_desire;
+	}
+	
 	//Reflexes
 	reflex basic_move{
-		write " " + current_plan + " " + get_current_intention() + " " + thirst_level 
-			+ " " + hunger_level + " " + money_level + " " + target;
+//		write " " + current_plan + " " + get_current_intention() + " " + thirst_level 
+//			+ " " + hunger_level + " " + money_level + " " + target;
+		do verify_target;
 		if self.target != nil{
+			wandering_for <- 0;
 			if self.target.location distance_to self.location < 3{
 				bool have_money <- true;
 				ask self.target{
@@ -193,46 +257,102 @@ species participant parent:human {
 				}
 
 				if !have_money{
-					predicate intention_now <- get_current_intention();
-					do current_intention_on_hold;
-					do add_subintention predicate: intention_now subintentions: bank_desire add_as_desire: true;
-					do add_desire(bank_desire);
+					do out_of_money;
 				}
 
 			} else{
 				do goto target:self.target.location speed:self.speed;
+//				write "moving";
 			}
 		} else{
 			
+			if wandering_for > max_wandering_time{
+				do remove_desire(get_current_intention());
+			}
+			
 			do update_desire;
 			do wander;
+			wandering_for <- wandering_for + 1;
+//			write "wandering";
 		}
 		
 		self.thirst_level <- self.thirst_level + self.thirst_delta;
 		self.hunger_level <- self.hunger_level + self.hunger_delta;
 	}
 
-	// reflex GetInfoLocation when: info_required != nil{
-	// 	self.target <- theIcenter;
-	// }
+	 reflex GetInfoLocation when: info_required != nil{
+	 	self.target <- theIcenter;
+	 }
+	 
+	 reflex update_intention{
+		if get_current_intention() != socialize_desire and get_current_intention() != nil{
+			my_preference <- get_current_intention();
+		}
+	}
 	
 	//Plans
 	plan share_information_to_people intention: socialize_desire{
 		loop s over:social_link_base{
 			if get_liking(s) > 0.5{
-				if get_agent(s).location distance_to location < 0.5{
-					write "How yu doin?";
-					break;	
+				human friend <- get_agent(s);
+				predicate target_desire <- nil;
+				if friend.location distance_to location < 0.3 and friend != self{
+//					write "How yu doin?";
+					ask friend{
+						float drinking_capacity <- (abs(self.drunk_threshold - myself.drunk_threshold))/max_drinking;
+						float hunger_capacity <- abs(self.hunger_threshold - myself.hunger_threshold)/max_hunger;
+						float sports_taste <- abs(self.sport_to_music_prob - myself.sport_to_music_prob);
+						float thirst_capacity <- abs(self.thirst_threshold - myself.thirst_threshold)/max_thirst;
+						float social_status <- abs(self.original_money_level - myself.original_money_level)/max_money;
+						
+						float score <- (drinking_capacity + hunger_capacity + sports_taste + thirst_capacity + social_status)/5.0;
+//						if self.my_preference != myself.my_preference{
+						if score < 0.1{
+							write "I love you";
+							
+							target_desire <- self.my_preference;
+							
+							do remove_desire(get_current_intention());
+							do clear_desires();
+							do clear_intentions();
+							do add_desire(target_desire);
+							
+							self.thirst_level <- 0.0;
+							self.drunk_level <- 0.0;
+							self.hunger_level <- 0.0;
+							self.money_level <- self.original_money_level;
+							
+							myself.thirst_level <- 0.0;
+							myself.drunk_level <- 0.0;
+							myself.hunger_level <- 0.0;
+							myself.money_level <- myself.original_money_level;
+							
+							rgb new_color <- rgb(rnd(0,255), rnd(0,255), rnd(0,255));
+							myself.mycolor <- new_color;
+							self.mycolor <- new_color;
+						}
+						
+						if target_desire != nil and get_liking(s) > 0.0{
+							do remove_desire(get_current_intention());
+							do clear_desires();
+							do clear_intentions();
+							do add_desire(target_desire);
+							write "updating desire";
+						}
+//						write "Our Preferences: " + self.my_preference + " " + myself.my_preference;
+					}
+					break;
 				}
 			}
 		}
 		
-		do remove_intention(socialize_desire, true);
+//		do remove_intention(socialize_desire, true);
+		do remove_desire(socialize_desire);
 	}
 
-	plan GoToIcenter intention: info_desire{
-		self.target <- theIcenter;
-	}
+//	plan GoToIcenter intention: info_desire{
+//		self.target <- theIcenter;
+//	}
 	
 	plan GoForDrink intention: drink_desire{
 		if Memory contains theShop{
@@ -307,7 +427,7 @@ species participant parent:human {
 		}
 		like <- like - (abs(self.drunk_level - myself.drunk_level)/100.0);
 		
-		social_link link <- new_social_link(self, like, dom, 0.0, familiar);
+		social_link link <- new_social_link(myself, like, dom, 0.0, familiar);
 		bool link_exists <- false;
 		loop b over: social_link_base{
 			if get_agent(b) = self{
@@ -336,6 +456,7 @@ species bathroom parent: building{
 		max_service <- 5;
 		time_for_serving <- 2;
 		price <- 0;
+		motive <- pee_desire;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -365,8 +486,10 @@ species bathroom parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(pee_desire, true);
-					do remove_intention(socialize_desire, true);
+//					do remove_intention(pee_desire, true);
+//					do remove_intention(socialize_desire, true);
+					do remove_desire(pee_desire);
+					do remove_desire(socialize_desire);
 					self.drunk_level <- self.drunk_level*0.75;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
@@ -389,6 +512,7 @@ species bank parent: building{
 		max_service <- 5;
 		time_for_serving <- 2;
 		price <- 0;
+		motive <- bank_desire;
 	}
 	
 	reflex receive_customers when: length(visitors) > 0{
@@ -418,8 +542,10 @@ species bank parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(bank_desire, true);
-					do remove_intention(socialize_desire, true);
+//					do remove_intention(bank_desire, true);
+//					do remove_intention(socialize_desire, true);
+					do remove_desire(bank_desire);
+					do remove_desire(socialize_desire);
 					self.money_level <- original_money_level;
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
@@ -442,6 +568,7 @@ species field parent: building{
 		max_service <- 5;
 		time_for_serving <- 5;
 		price <- 25;
+		motive <- football_desire;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -471,8 +598,10 @@ species field parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(football_desire, true);
-					do remove_intention(socialize_desire, true);
+//					do remove_intention(football_desire, true);
+//					do remove_intention(socialize_desire, true);
+					do remove_desire(football_desire);
+					do remove_desire(socialize_desire);
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
 					add customer to: customers_served;
@@ -489,11 +618,12 @@ species field parent: building{
 species shop parent: building{
 	
 	init{
-		theShop <- self;
 		location <- SHOP_location;
 		max_service <- 5;
 		time_for_serving <- 2;
 		price <- 30;
+		motive <- eat_desire;
+		theShop <- self;
 	}
 	
 	reflex recieve_customers when: length(visitors) > 0{
@@ -524,16 +654,22 @@ species shop parent: building{
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
 					//self.//target <- nil;
-					if self.get_current_intention = eat_desire{
-						do remove_intention(eat_desire, true);
-						do remove_intention(socialize_desire, true);
+//					do remove_intention(socialize_desire, true);
+					do remove_desire(socialize_desire);
+//					write "My intentions: " + self.get_current_intention();
+					if self.get_current_intention() = eat_desire and self.money_level > myself.price{
+//						do remove_intention(eat_desire, true);
+						do remove_desire(eat_desire);
 						self.hunger_level <- 0.0;
 						self.money_level <- self.money_level - myself.price;
-					} else{
-						do remove_intention(drink_desire, true);
+					} else if self.get_current_intention() = drink_desire and self.money_level > (myself.price*2){
+//						do remove_intention(drink_desire, true);
+						do remove_desire(drink_desire);
 						self.thirst_level <- 0.0;
 						self.drunk_level <- self.drunk_level + self.drunk_delta;
 						self.money_level <- self.money_level - (myself.price*2);
+					} else{
+						do out_of_money;
 					}
 					do on_served;
 					add customer to: customers_served;
@@ -554,12 +690,13 @@ species stage parent: building{
 		location <- STAGE_location;
 		max_service <- 5;
 		price <- 50;
+		motive <- music_desire;
 	}
 	
-	reflex recieve_customers when: length(visitors) > 0{
+	reflex receive_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
-			human next_customer <- first(visitors);
-			remove next_customer from: visitors;
+			human next_customer <- visitors[0];
+			remove visitors[0] from: visitors;
 			add next_customer to: serving;
 		} else{
 			loop p over:visitors{
@@ -583,8 +720,10 @@ species stage parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(music_desire, true);
-					do remove_intention(socialize_desire, true);
+//					do remove_intention(music_desire, true);
+//					do remove_intention(socialize_desire, true);
+					do remove_desire(music_desire);
+					do remove_desire(socialize_desire);
 					self.money_level <- self.money_level - myself.price;
 					do on_served;
 					add customer to: customers_served;
@@ -605,9 +744,10 @@ species icenter parent: building{
 		location <- ICENTER_location;
 		max_service <- 5;
 		price <- 0;
+		motive <- info_desire;
 	}
 	
-	reflex recieve_customers when: length(visitors) > 0{
+	reflex receive_customers when: length(visitors) > 0{
 		if length(serving) <= max_service{
 			human next_customer <- first(visitors);
 			remove next_customer from: visitors;
@@ -634,43 +774,34 @@ species icenter parent: building{
 			
 			if customer_serving_time > self.time_for_serving{
 				ask customer{
-					do remove_intention(info_desire, true);
+//					do remove_intention(info_desire, true);
+//					do remove_intention(socialize_desire, true);
 					do remove_desire(info_desire);
-					do remove_intention(socialize_desire, true);
+					do remove_desire(socialize_desire);
 					self.money_level <- self.money_level - myself.price;
 					
 					if self.info_required = drink_desire{
 						add theShop to: self.Memory;
-						do on_served(theShop);
-//						target <- theShop;
 					} else if self.info_required = eat_desire{
 						add theShop to: self.Memory;
-						do on_served(theShop);
-//						target <- theShop;
 					} else if self.info_required = bank_desire{
 						add theBank to: self.Memory;
-						do on_served(theBank);
-//						target <- theBank;
 					} else if self.info_required = football_desire{
 						add theField to: self.Memory;
-						do on_served(theField);
-//						target <- theField;
 					} else if self.info_required = music_desire{
 						add theStage to: self.Memory;
-						do on_served(theStage);
-//						target <- theStage;
 					} else if self.info_required = pee_desire{
 						add theBathroom to: self.Memory;
-						do on_served(theBathroom);
-//						target <- theBathroom;
 					} else {
 						write "No Info Required";
 					}
 					
+					write "Info Obtained: " + self.info_required;
 					do add_desire(self.info_required);
 					self.info_required <- nil;
-//					do on_served;
+					do on_served;
 					add customer to: customers_served;
+					do wander;
 				}
 			}
 		}
