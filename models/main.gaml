@@ -20,7 +20,7 @@ global{
 	predicate socialize_desire <- new_predicate("socialize_desire")  with_priority 1;
 	
 	// Information
-	point ICENTER_location <- {10,10};
+	point ICENTER_location <- {20,20};
 	point STAGE_location <- {50, 75};
 	point BANK_location <- {75, 75};
 	point SHOP_location <- {75, 50};
@@ -40,6 +40,10 @@ global{
 	float max_hunger <- 1000.0;
 	float max_thirst <- 1000.0;
 	float max_money <- 1000.0;
+	float min_drinking <- 30.0;
+	float min_hunger <- 500.0;
+	float min_thirst <- 500.0;
+	float min_money <- 500.0;
 	
 	
 	init{
@@ -156,14 +160,14 @@ species participant parent:human {
 	
 	init{
 		drunk_level <- rnd(0.0, 100.0);
-		money_level <- rnd(500.0, max_money);
+		money_level <- rnd(min_money, max_money);
 		hunger_level <- rnd(0.0, 100.0);
 		
 		original_money_level <- money_level;
 		
-		drunk_threshold <- rnd(50.0, max_drinking);
-		thirst_threshold <- rnd(500.0, max_thirst);
-		hunger_threshold <- rnd(500.0, max_hunger);	
+		drunk_threshold <- rnd(min_drinking, max_drinking);
+		thirst_threshold <- rnd(min_thirst, max_thirst);
+		hunger_threshold <- rnd(min_hunger, max_hunger);	
 		
 		drunk_delta <- rnd(10.0, 20.0);
 		thirst_delta <- rnd(5.0, 10.0);
@@ -233,7 +237,6 @@ species participant parent:human {
 		do current_intention_on_hold;
 		do add_subintention predicate: intention_now subintentions: bank_desire add_as_desire: true;
 		do add_desire(bank_desire);
-		target <- theBank;
 		do update_desire;
 	}
 	
@@ -290,6 +293,12 @@ species participant parent:human {
 		}
 	}
 	
+	reflex forget_everything when: drunk_level > (min_drinking + ((max_drinking-min_drinking)/2.0)){
+		if flip(0.001){
+			self.Memory <- [];
+		}
+	}
+	
 	//Plans
 	plan share_information_to_people intention: socialize_desire{
 		loop s over:social_link_base{
@@ -299,15 +308,15 @@ species participant parent:human {
 				if friend.location distance_to location < 0.3 and friend != self{
 //					write "How yu doin?";
 					ask friend{
-						float drinking_capacity <- (abs(self.drunk_threshold - myself.drunk_threshold))/max_drinking;
-						float hunger_capacity <- abs(self.hunger_threshold - myself.hunger_threshold)/max_hunger;
+						float drinking_capacity <- (abs(self.drunk_threshold - myself.drunk_threshold))/(max_drinking-min_drinking);
+						float hunger_capacity <- abs(self.hunger_threshold - myself.hunger_threshold)/(max_hunger-min_hunger);
 						float sports_taste <- abs(self.sport_to_music_prob - myself.sport_to_music_prob);
-						float thirst_capacity <- abs(self.thirst_threshold - myself.thirst_threshold)/max_thirst;
-						float social_status <- abs(self.original_money_level - myself.original_money_level)/max_money;
+						float thirst_capacity <- abs(self.thirst_threshold - myself.thirst_threshold)/(max_thirst-min_thirst);
+						float social_status <- abs(self.original_money_level - myself.original_money_level)/(max_money-min_money);
 						
 						float score <- (drinking_capacity + hunger_capacity + sports_taste + thirst_capacity + social_status)/5.0;
 //						if self.my_preference != myself.my_preference{
-						if score < 0.1{
+						if score < 0.3{
 							write "I love you";
 							
 							target_desire <- self.my_preference;
